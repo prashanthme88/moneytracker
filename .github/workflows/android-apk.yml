@@ -1,0 +1,49 @@
+name: Build MoneyTracker APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+      - name: Auto-unwrap nested zip or folder if uploaded directly from mobile
+        run: |
+          if [ ! -f "settings.gradle.kts" ]; then
+            ZFILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+            if [ -n "$ZFILE" ]; then
+              unzip -o "$ZFILE" -d /tmp/unpacked
+              if [ -d "/tmp/unpacked/moneytracker" ]; then
+                cp -r /tmp/unpacked/moneytracker/. .
+              else
+                cp -r /tmp/unpacked/. .
+              fi
+              rm -f "$ZFILE"
+            elif [ -f "moneytracker/settings.gradle.kts" ]; then
+              cp -r moneytracker/. .
+            fi
+          fi
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Build debug APK
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: moneytracker-v56-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
