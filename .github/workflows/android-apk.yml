@@ -14,21 +14,21 @@ jobs:
     steps:
       - name: Check out project
         uses: actions/checkout@v4
-      - name: Auto-unwrap nested zip or folder if uploaded directly from mobile
+      - name: Flatten directory or unpack ZIP if nested
         run: |
-          if [ ! -f "settings.gradle.kts" ]; then
-            ZFILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
-            if [ -n "$ZFILE" ]; then
-              unzip -o "$ZFILE" -d /tmp/unpacked
-              if [ -d "/tmp/unpacked/moneytracker" ]; then
-                cp -r /tmp/unpacked/moneytracker/. .
-              else
-                cp -r /tmp/unpacked/. .
-              fi
-              rm -f "$ZFILE"
-            elif [ -f "moneytracker/settings.gradle.kts" ]; then
-              cp -r moneytracker/. .
-            fi
+          if [ -f "moneytracker-v56-github-ready.zip" ]; then
+            unzip -o moneytracker-v56-github-ready.zip -d /tmp/unpacked
+            cp -rf /tmp/unpacked/* .
+          elif [ -d "moneytracker" ]; then
+            cp -rf moneytracker/* .
+          elif [ -f "*.zip" ]; then
+            ZFILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+            unzip -o "$ZFILE" -d /tmp/unpacked
+            cp -rf /tmp/unpacked/* .
+          fi
+          # If app folder is still missing, search subfolders and move files up
+          if [ ! -d "app" ] && [ -d "moneytracker/app" ]; then
+            cp -rf moneytracker/* .
           fi
       - name: Set up Java 17
         uses: actions/setup-java@v4
